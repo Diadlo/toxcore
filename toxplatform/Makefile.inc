@@ -8,6 +8,8 @@ libtoxplatform_la_includedir = $(includedir)/tox
 libtoxplatform_la_SOURCES = \
                             ../toxplatform/network.h \
                             ../toxplatform/network.c 
+                            ../toxplatform/network_win.c 
+                            ../toxplatform/network_other.c 
 
 libtoxplatform_la_CFLAGS = \
                            -I$(top_srcdir)

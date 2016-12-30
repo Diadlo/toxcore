@@ -214,6 +214,8 @@ endif()
 # -------------------------
 add_module(toxplatform
   toxplatform/network.c
+  toxplatform/network_win.c
+  toxplatform/network_other.c
   toxplatform/network.h)
 target_link_modules(toxplatform toxcrypto)
 

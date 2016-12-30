@@ -21,6 +21,10 @@
  *
  */
 
+#if defined(_WIN32) && _WIN32_WINNT >= _WIN32_WINNT_WINXP
+#define _WIN32_WINNT  0x501
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -29,6 +33,148 @@
 
 #include "../toxcore/logger.h"
 #include "../toxcore/util.h"
+
+#if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
+#include <errno.h>
+#endif
+
+#ifdef __APPLE__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+
+static const char *inet_ntop(sa_family_t family, const void *addr, char *buf, size_t bufsize)
+{
+    if (family == AF_INET) {
+        struct sockaddr_in saddr;
+        memset(&saddr, 0, sizeof(saddr));
+
+        saddr.sin_family = AF_INET;
+        saddr.sin_addr = *(const struct in_addr *)addr;
+
+        DWORD len = bufsize;
+
+        if (WSAAddressToString((LPSOCKADDR)&saddr, sizeof(saddr), NULL, buf, &len)) {
+            return NULL;
+        }
+
+        return buf;
+    } else if (family == AF_INET6) {
+        struct sockaddr_in6 saddr;
+        memset(&saddr, 0, sizeof(saddr));
+
+        saddr.sin6_family = AF_INET6;
+        saddr.sin6_addr = *(const struct in6_addr *)addr;
+
+        DWORD len = bufsize;
+
+        if (WSAAddressToString((LPSOCKADDR)&saddr, sizeof(saddr), NULL, buf, &len)) {
+            return NULL;
+        }
+
+        return buf;
+    }
+
+    return NULL;
+}
+
+static int inet_pton(sa_family_t family, const char *addrString, void *addrbuf)
+{
+    if (family == AF_INET) {
+        struct sockaddr_in saddr;
+        memset(&saddr, 0, sizeof(saddr));
+
+        INT len = sizeof(saddr);
+
+        if (WSAStringToAddress((LPTSTR)addrString, AF_INET, NULL, (LPSOCKADDR)&saddr, &len)) {
+            return 0;
+        }
+
+        *(struct in_addr *)addrbuf = saddr.sin_addr;
+
+        return 1;
+    } else if (family == AF_INET6) {
+        struct sockaddr_in6 saddr;
+        memset(&saddr, 0, sizeof(saddr));
+
+        INT len = sizeof(saddr);
+
+        if (WSAStringToAddress((LPTSTR)addrString, AF_INET6, NULL, (LPSOCKADDR)&saddr, &len)) {
+            return 0;
+        }
+
+        *(struct in6_addr *)addrbuf = saddr.sin6_addr;
+
+        return 1;
+    }
+
+    return 0;
+}
+
+#endif
+
+/* Check if socket is valid.
+ *
+ * return 1 if valid
+ * return 0 if not valid
+ */
+int sock_valid(sock_t sock)
+{
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+
+    if (sock == INVALID_SOCKET) {
+#else
+
+    if (sock < 0) {
+#endif
+        return 0;
+    }
+
+    return 1;
+}
+
+/* Close the socket.
+ */
+void kill_sock(sock_t sock)
+{
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+    closesocket(sock);
+#else
+    close(sock);
+#endif
+}
+
+/* Set socket as nonblocking
+ *
+ * return 1 on success
+ * return 0 on failure
+ */
+int set_socket_nonblock(sock_t sock)
+{
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+    u_long mode = 1;
+    return (ioctlsocket(sock, FIONBIO, &mode) == 0);
+#else
+    return (fcntl(sock, F_SETFL, O_NONBLOCK, 1) == 0);
+#endif
+}
+
+/* Set socket to not emit SIGPIPE
+ *
+ * return 1 on success
+ * return 0 on failure
+ */
+int set_socket_nosigpipe(sock_t sock)
+{
+#if defined(__MACH__)
+    int set = 1;
+    return (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, (const char *)&set, sizeof(int)) == 0);
+#else
+    return 1;
+#endif
+}
 
 /* Enable SO_REUSEADDR on socket.
  *
@@ -60,6 +206,69 @@ int set_socket_dualstack(sock_t sock)
     return (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&ipv6only, sizeof(ipv6only)) == 0);
 }
 
+
+/*  return current UNIX time in microseconds (us). */
+static uint64_t current_time_actual(void)
+{
+    uint64_t time;
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+    /* This probably works fine */
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    time = ft.dwHighDateTime;
+    time <<= 32;
+    time |= ft.dwLowDateTime;
+    time -= 116444736000000000ULL;
+    return time / 10;
+#else
+    struct timeval a;
+    gettimeofday(&a, NULL);
+    time = 1000000ULL * a.tv_sec + a.tv_usec;
+    return time;
+#endif
+}
+
+
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+static uint64_t last_monotime;
+static uint64_t add_monotime;
+#endif
+
+/* return current monotonic time in milliseconds (ms). */
+uint64_t current_time_monotonic(void)
+{
+    uint64_t time;
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+    time = (uint64_t)GetTickCount() + add_monotime;
+
+    if (time < last_monotime) { /* Prevent time from ever decreasing because of 32 bit wrap. */
+        uint32_t add = ~0;
+        add_monotime += add;
+        time += add;
+    }
+
+    last_monotime = time;
+#else
+    struct timespec monotime;
+#if defined(__linux__) && defined(CLOCK_MONOTONIC_RAW)
+    clock_gettime(CLOCK_MONOTONIC_RAW, &monotime);
+#elif defined(__APPLE__)
+    clock_serv_t muhclock;
+    mach_timespec_t machtime;
+
+    host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &muhclock);
+    clock_get_time(muhclock, &machtime);
+    mach_port_deallocate(mach_task_self(), muhclock);
+
+    monotime.tv_sec = machtime.tv_sec;
+    monotime.tv_nsec = machtime.tv_nsec;
+#else
+    clock_gettime(CLOCK_MONOTONIC, &monotime);
+#endif
+    time = 1000ULL * monotime.tv_sec + (monotime.tv_nsec / 1000000ULL);
+#endif
+    return time;
+}
 
 static uint32_t data_0(uint16_t buflen, const uint8_t *buffer)
 {
@@ -161,6 +370,59 @@ int sendpacket(Networking_Core *net, IP_Port ip_port, const uint8_t *data, uint1
     return res;
 }
 
+/* Function to receive data
+ *  ip and port of sender is put into ip_port.
+ *  Packet data is put into data.
+ *  Packet length is put into length.
+ */
+static int receivepacket(Logger *log, sock_t sock, IP_Port *ip_port, uint8_t *data, uint32_t *length)
+{
+    memset(ip_port, 0, sizeof(IP_Port));
+    struct sockaddr_storage addr;
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+    int addrlen = sizeof(addr);
+#else
+    socklen_t addrlen = sizeof(addr);
+#endif
+    *length = 0;
+    int fail_or_len = recvfrom(sock, (char *) data, MAX_UDP_PACKET_SIZE, 0, (struct sockaddr *)&addr, &addrlen);
+
+    if (fail_or_len < 0) {
+
+        if (fail_or_len < 0 && errno != EWOULDBLOCK) {
+            LOGGER_ERROR(log, "Unexpected error reading from socket: %u, %s\n", errno, strerror(errno));
+        }
+
+        return -1; /* Nothing received. */
+    }
+
+    *length = (uint32_t)fail_or_len;
+
+    if (addr.ss_family == AF_INET) {
+        struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
+
+        ip_port->ip.family = addr_in->sin_family;
+        ip_port->ip.ip4.in_addr = addr_in->sin_addr;
+        ip_port->port = addr_in->sin_port;
+    } else if (addr.ss_family == AF_INET6) {
+        struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)&addr;
+        ip_port->ip.family = addr_in6->sin6_family;
+        ip_port->ip.ip6.in6_addr = addr_in6->sin6_addr;
+        ip_port->port = addr_in6->sin6_port;
+
+        if (IPV6_IPV4_IN_V6(ip_port->ip.ip6)) {
+            ip_port->ip.family = AF_INET;
+            ip_port->ip.ip4.uint32 = ip_port->ip.ip6.uint32[3];
+        }
+    } else {
+        return -1;
+    }
+
+    loglogdata(log, "=>O", data, MAX_UDP_PACKET_SIZE, *ip_port, *length);
+
+    return 0;
+}
+
 void networking_registerhandler(Networking_Core *net, uint8_t byte, packet_handler_callback cb, void *object)
 {
     net->packethandlers[byte].function = cb;
@@ -193,8 +455,6 @@ void networking_poll(Networking_Core *net, void *userdata)
     }
 }
 
-int platform_networking_at_startup();
-
 #ifndef VANILLA_NACL
 /* Used for sodium_init() */
 #include <sodium.h>
@@ -221,15 +481,28 @@ int networking_at_startup(void)
 
 #endif/*VANILLA_NACL*/
 
-    int res = platform_networking_at_startup();
-    if (res != 0) {
-        return res;
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+    WSADATA wsaData;
+
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != NO_ERROR) {
+        return -1;
     }
 
+#endif
     srand((uint32_t)current_time_actual());
     at_startup_ran = 1;
     return 0;
 }
+
+/* TODO(irungentoo): Put this somewhere */
+#if 0
+static void at_shutdown(void)
+{
+#if defined(_WIN32) || defined(__WIN32__) || defined (WIN32)
+    WSACleanup();
+#endif
+}
+#endif
 
 /* Initialize networking.
  * Added for reverse compatibility with old new_networking calls.
