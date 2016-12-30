@@ -30,7 +30,7 @@
 #include "rtp.h"
 
 #include "../toxcore/logger.h"
-#include "../toxcore/network.h"
+#include "../toxplatform/network.h"
 
 #include <assert.h>
 #include <stdlib.h>

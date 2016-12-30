@@ -23,7 +23,7 @@
 #ifndef PING_ARRAY_H
 #define PING_ARRAY_H
 
-#include "network.h"
+#include "../toxplatform/network.h"
 
 typedef struct {
     void *data;

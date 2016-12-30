@@ -29,7 +29,7 @@
 
 #include "crypto_core.h"
 
-#include "network.h"
+#include "../toxplatform/network.h"
 
 #include <string.h>
 

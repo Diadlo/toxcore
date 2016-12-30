@@ -210,29 +210,25 @@ if(WIN32)
   target_link_modules(toxcrypto ws2_32) # for htonl
 endif()
 
-# LAYER 2: Basic networking
+# LAYER 2: Platform-related part
 # -------------------------
-add_module(toxnetwork
-  toxcore/logger.c
-  toxcore/logger.h
-  toxcore/network.c
-  toxcore/network.h
-  toxcore/util.c
-  toxcore/util.h)
-target_link_modules(toxnetwork toxcrypto)
+add_module(toxplatform
+  toxplatform/network.c
+  toxplatform/network.h)
+target_link_modules(toxplatform toxcrypto)
 
 if(CMAKE_THREAD_LIBS_INIT)
-  target_link_modules(toxnetwork ${CMAKE_THREAD_LIBS_INIT})
+  target_link_modules(toxplatform ${CMAKE_THREAD_LIBS_INIT})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
 if(RT_LIBRARIES)
-  target_link_modules(toxnetwork ${RT_LIBRARIES})
+  target_link_modules(toxplatform ${RT_LIBRARIES})
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lrt")
 endif()
 
 if(WIN32)
-  target_link_modules(toxnetwork ws2_32 iphlpapi)
+  target_link_modules(toxplatform ws2_32 iphlpapi)
   set(toxcore_PKGCONFIG_LIBS ${toxcore_PKGCONFIG_LIBS} "-lws2_32 -liphlpapi")
 endif()
 
@@ -243,11 +239,15 @@ add_module(toxdht
   toxcore/DHT.h
   toxcore/LAN_discovery.c
   toxcore/LAN_discovery.h
+  toxcore/logger.c
+  toxcore/logger.h
   toxcore/ping.c
   toxcore/ping.h
   toxcore/ping_array.c
-  toxcore/ping_array.h)
-target_link_modules(toxdht toxnetwork)
+  toxcore/ping_array.h
+  toxcore/util.c
+  toxcore/util.h)
+target_link_modules(toxdht toxplatform)
 
 # LAYER 4: Onion routing, TCP connections, crypto connections
 # -----------------------------------------------------------

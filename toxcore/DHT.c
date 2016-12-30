@@ -32,7 +32,7 @@
 #include "LAN_discovery.h"
 #include "logger.h"
 #include "misc_tools.h"
-#include "network.h"
+#include "../toxplatform/network.h"
 #include "ping.h"
 #include "util.h"
 

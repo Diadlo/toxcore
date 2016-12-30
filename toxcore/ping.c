@@ -30,7 +30,7 @@
 #include "ping.h"
 
 #include "DHT.h"
-#include "network.h"
+#include "../toxplatform/network.h"
 #include "ping_array.h"
 #include "util.h"
 

@@ -25,7 +25,7 @@
 #define PING_H
 
 #include "DHT.h"
-#include "network.h"
+#include "../toxplatform/network.h"
 
 #include <stdint.h>
 

@@ -26,7 +26,7 @@
 #ifndef BOOTSTRAP_NODE_PACKETS_H
 #define BOOTSTRAP_NODE_PACKETS_H
 
-#include "../toxcore/network.h"
+#include "../toxplatform/network.h"
 
 #define MAX_MOTD_LENGTH 256 /* I recommend you use a maximum of 96 bytes. The hard maximum is this though. */
 

@@ -30,7 +30,7 @@
 #include <libc.h>
 #endif
 
-#include "logger.h"
+#include "../toxcore/logger.h"
 
 #include <stdint.h>
 #include <stdio.h>

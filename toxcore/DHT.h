@@ -26,7 +26,7 @@
 
 #include "crypto_core.h"
 #include "logger.h"
-#include "network.h"
+#include "../toxplatform/network.h"
 #include "ping_array.h"
 
 #include <stdbool.h>

@@ -7,8 +7,6 @@ libtoxcore_la_includedir = $(includedir)/tox
 
 libtoxcore_la_SOURCES = ../toxcore/DHT.h \
                         ../toxcore/DHT.c \
-                        ../toxcore/network.h \
-                        ../toxcore/network.c \
                         ../toxcore/crypto_core.h \
                         ../toxcore/crypto_core.c \
                         ../toxcore/ping_array.h \
@@ -64,7 +62,8 @@ libtoxcore_la_LDFLAGS = $(TOXCORE_LT_LDFLAGS) \
                         $(RT_LIBS) \
                         $(WINSOCK2_LIBS)
 
-libtoxcore_la_LIBADD =  $(LIBSODIUM_LIBS) \
+libtoxcore_la_LIBADD =  libtoxplatform.la \
+                        $(LIBSODIUM_LIBS) \
                         $(NACL_OBJECTS) \
                         $(NAC_LIBS) \
                         $(PTHREAD_LIBS)

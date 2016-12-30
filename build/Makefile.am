@@ -4,6 +4,7 @@ lib_LTLIBRARIES =
 noinst_bindir = $(top_builddir)/build
 EXTRA_DIST=
 
+include ../toxplatform/Makefile.inc
 include ../toxcore/Makefile.inc
 include ../toxdns/Makefile.inc
 include ../toxencryptsave/Makefile.inc

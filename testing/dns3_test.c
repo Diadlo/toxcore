@@ -1,6 +1,6 @@
 
 
-#include "../toxcore/network.h"
+#include "../toxplatform/network.h"
 #include "../toxcore/tox.h"
 #include "../toxdns/toxdns.h"
 #include "misc_tools.c"

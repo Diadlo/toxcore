@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "../toxcore/network.h"
+#include "../toxplatform/network.h"
 
 #include "helpers.h"
 

@@ -28,7 +28,7 @@
 #include "Messenger.h"
 
 #include "logger.h"
-#include "network.h"
+#include "../toxplatform/network.h"
 #include "util.h"
 
 #ifdef TOX_DEBUG

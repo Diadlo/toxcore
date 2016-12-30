@@ -31,8 +31,8 @@
 
 #include "network.h"
 
-#include "logger.h"
-#include "util.h"
+#include "../toxcore/logger.h"
+#include "../toxcore/util.h"
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined (WIN32)
 #include <errno.h>
