@@ -1209,7 +1209,7 @@ int net_connect(Socket sock, IP_Port ip_port)
     return connect(sock, (struct sockaddr *)&addr, addrsize);
 }
 
-int32_t net_getipport(const char* node, IP_Port** res, int type)
+int32_t net_getipport(const char* node, IP_Port** res, int tox_type)
 {
     struct addrinfo *infos;
     int ret = getaddrinfo(node, NULL, NULL, &infos);
@@ -1217,6 +1217,7 @@ int32_t net_getipport(const char* node, IP_Port** res, int type)
         return -1;
     }
 
+    int type = make_socktype(tox_type);
     struct addrinfo *cur;
     int count = 0;
     for (cur = infos; count < INT32_MAX && cur != NULL; cur = cur->ai_next) {
@@ -1224,7 +1225,7 @@ int32_t net_getipport(const char* node, IP_Port** res, int type)
             continue;
         }
 
-        if (cur->ai_family != AF_INET && cur->ai_family != AF_INET6) {
+        if (cur->ai_family != TOX_AF_INET && cur->ai_family != TOX_AF_INET6) {
             continue;
         }
 
@@ -1242,7 +1243,7 @@ int32_t net_getipport(const char* node, IP_Port** res, int type)
 
     IP_Port *ip_port = *res;
     for (cur = infos; cur != NULL; cur = cur->ai_next) {
-        ip_port->ip.family = cur->ai_family;
+        ip_port->ip.family = make_family(cur->ai_family);
 
         if (cur->ai_socktype && type > 0 && cur->ai_socktype != type) {
             continue;
@@ -1301,6 +1302,8 @@ int bind_to_port(Socket sock, int family, uint16_t port)
 static int make_family(int family)
 {
     switch (family) {
+    case TOX_AF_UNSPEC:
+        return AF_UNSPEC;
     case TOX_AF_INET:
         return AF_INET;
     case TOX_AF_INET6:
@@ -1375,4 +1378,3 @@ uint16_t net_ntohs(uint16_t hostshort)
 {
     return ntohs(hostshort);
 }
-

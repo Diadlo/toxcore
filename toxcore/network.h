@@ -107,7 +107,11 @@ typedef enum NET_PACKET_TYPE {
 #define TOX_PORTRANGE_TO   33545
 #define TOX_PORT_DEFAULT   TOX_PORTRANGE_FROM
 
+#define INET6_ADDRSTRLEN 46
+#define TOX_INET_LOOPBACK 0x7f000001 /* Inet 127.0.0.1.  */
+
 /* Redefinitions of variables for safe transfer over wire. */
+#define TOX_AF_UNSPEC 0
 #define TOX_AF_INET 2
 #define TOX_AF_INET6 10
 #define TOX_TCP_INET 130
@@ -120,10 +124,10 @@ typedef enum NET_PACKET_TYPE {
 #define TOX_PROTO_UDP 2
 
 /* TCP related */
-#define TCP_ONION_FAMILY (AF_INET6 + 1)
-#define TCP_INET (AF_INET6 + 2)
-#define TCP_INET6 (AF_INET6 + 3)
-#define TCP_FAMILY (AF_INET6 + 4)
+#define TCP_ONION_FAMILY (TOX_AF_INET6 + 1)
+#define TCP_INET (TOX_AF_INET6 + 2)
+#define TCP_INET6 (TOX_AF_INET6 + 3)
+#define TCP_FAMILY (TOX_AF_INET6 + 4)
 
 typedef union {
     uint8_t uint8[4];
@@ -171,7 +175,7 @@ uint32_t net_ntohl(uint32_t hostlong);
 uint16_t net_ntohs(uint16_t hostshort);
 
 /* Does the IP6 struct a contain an IPv4 address in an IPv6 one? */
-#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == htonl (0xffff)))
+#define IPV6_IPV4_IN_V6(a) ((a.uint64[0] == 0) && (a.uint32[2] == net_htonl(0xffff)))
 
 #define SIZE_IP4 4
 #define SIZE_IP6 16

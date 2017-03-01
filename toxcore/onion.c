@@ -614,8 +614,8 @@ static int handle_recv_1(void *object, IP_Port source, const uint8_t *packet, ui
     uint16_t data_len = length - (1 + RETURN_1);
 
     if (onion->recv_1_function &&
-            send_to.ip.family != AF_INET &&
-            send_to.ip.family != AF_INET6) {
+            send_to.ip.family != TOX_AF_INET &&
+            send_to.ip.family != TOX_AF_INET6) {
         return onion->recv_1_function(onion->callback_object, send_to, packet + (1 + RETURN_1), data_len);
     }
 
