@@ -51,8 +51,6 @@ static void change_symmetric_key(Onion *onion)
 /* packing and unpacking functions */
 static void ip_pack(uint8_t *data, IP source)
 {
-    to_net_family(&source);
-
     data[0] = source.family;
 
     if (source.family == TOX_AF_INET || source.family == TOX_TCP_INET) {
@@ -64,7 +62,7 @@ static void ip_pack(uint8_t *data, IP source)
 }
 
 /* return 0 on success, -1 on failure. */
-static int ip_unpack(IP *target, const uint8_t *data, unsigned int data_size, bool disable_family_check)
+static int ip_unpack(IP *target, const uint8_t *data, unsigned int data_size)
 {
     if (data_size < (1 + SIZE_IP6)) {
         return -1;
@@ -78,11 +76,10 @@ static int ip_unpack(IP *target, const uint8_t *data, unsigned int data_size, bo
         memcpy(target->ip6.uint8, data + 1, SIZE_IP6);
     }
 
-    if (!disable_family_check) {
-        return to_host_family(target);
+    if (target->family != TOX_AF_INET && target->family != TOX_AF_INET6) {
+        return -1;
     }
 
-    to_host_family(target);
     return 0;
 }
 
@@ -92,14 +89,14 @@ static void ipport_pack(uint8_t *data, const IP_Port *source)
     memcpy(data + SIZE_IP, &source->port, SIZE_PORT);
 }
 
-/* return 0 on success, -1 on failure. */
-static int ipport_unpack(IP_Port *target, const uint8_t *data, unsigned int data_size, bool disable_family_check)
+/* return 0 on success, -1 on failure */
+static int ipport_unpack(IP_Port *target, const uint8_t *data, unsigned int data_size)
 {
     if (data_size < (SIZE_IP + SIZE_PORT)) {
         return -1;
     }
 
-    if (ip_unpack(&target->ip, data, data_size, disable_family_check) == -1) {
+    if (ip_unpack(&target->ip, data, data_size) == -1) {
         return -1;
     }
 
@@ -363,8 +360,7 @@ int onion_send_1(const Onion *onion, const uint8_t *plain, uint16_t len, IP_Port
     }
 
     IP_Port send_to;
-
-    if (ipport_unpack(&send_to, plain, len, 0) == -1) {
+    if (ipport_unpack(&send_to, plain, len) == -1) {
         return 1;
     }
 
@@ -420,7 +416,7 @@ static int handle_send_1(void *object, IP_Port source, const uint8_t *packet, ui
 
     IP_Port send_to;
 
-    if (ipport_unpack(&send_to, plain, len, 0) == -1) {
+    if (ipport_unpack(&send_to, plain, len) == -1) {
         return 1;
     }
 
@@ -476,7 +472,7 @@ static int handle_send_2(void *object, IP_Port source, const uint8_t *packet, ui
 
     IP_Port send_to;
 
-    if (ipport_unpack(&send_to, plain, len, 0) == -1) {
+    if (ipport_unpack(&send_to, plain, len) == -1) {
         return 1;
     }
 
@@ -529,7 +525,7 @@ static int handle_recv_3(void *object, IP_Port source, const uint8_t *packet, ui
 
     IP_Port send_to;
 
-    if (ipport_unpack(&send_to, plain, len, 0) == -1) {
+    if (ipport_unpack(&send_to, plain, len) == -1) {
         return 1;
     }
 
@@ -570,7 +566,7 @@ static int handle_recv_2(void *object, IP_Port source, const uint8_t *packet, ui
 
     IP_Port send_to;
 
-    if (ipport_unpack(&send_to, plain, len, 0) == -1) {
+    if (ipport_unpack(&send_to, plain, len) == -1) {
         return 1;
     }
 
@@ -611,13 +607,15 @@ static int handle_recv_1(void *object, IP_Port source, const uint8_t *packet, ui
 
     IP_Port send_to;
 
-    if (ipport_unpack(&send_to, plain, len, 1) == -1) {
+    if (ipport_unpack(&send_to, plain, len) == -1) {
         return 1;
     }
 
     uint16_t data_len = length - (1 + RETURN_1);
 
-    if (onion->recv_1_function && send_to.ip.family != AF_INET && send_to.ip.family != AF_INET6) {
+    if (onion->recv_1_function &&
+            send_to.ip.family != AF_INET &&
+            send_to.ip.family != AF_INET6) {
         return onion->recv_1_function(onion->callback_object, send_to, packet + (1 + RETURN_1), data_len);
     }
 
