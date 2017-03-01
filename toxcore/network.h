@@ -55,7 +55,7 @@
 
 #else // Linux includes
 
-#include <netdb.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 
 #endif
