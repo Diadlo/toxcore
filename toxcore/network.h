@@ -136,6 +136,8 @@ typedef union {
 }
 IP4;
 
+const IP4 ip4_loopback;
+
 typedef union {
     uint8_t uint8[16];
     uint16_t uint16[8];
@@ -143,6 +145,8 @@ typedef union {
     uint64_t uint64[2];
 }
 IP6;
+
+const IP6 ip6_loopback;
 
 typedef struct {
     uint8_t family;
