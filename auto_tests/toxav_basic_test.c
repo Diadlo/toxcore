@@ -76,6 +76,8 @@ static void t_toxav_receive_video_frame_cb(ToxAV *av, uint32_t friend_number,
     printf("Received video payload\n");
 }
 
+static bool audio_received = false;
+
 static void t_toxav_receive_audio_frame_cb(ToxAV *av, uint32_t friend_number,
         int16_t const *pcm,
         size_t sample_count,
@@ -83,6 +85,7 @@ static void t_toxav_receive_audio_frame_cb(ToxAV *av, uint32_t friend_number,
         uint32_t sampling_rate,
         void *user_data)
 {
+    audio_received = true;
     printf("Received audio payload\n");
 }
 
@@ -548,6 +551,16 @@ static void test_av_flows(void)
         ck_assert(BobCC.state == TOXAV_FRIEND_CALL_STATE_FINISHED);
 
         printf("Success!\n");
+    }
+
+    while (1) {
+        iterate_tox(bootstrap, Alice, Bob);
+
+        if (audio_received) {
+            break;
+        }
+
+        c_sleep(20);
     }
 
     toxav_kill(BobAV);
